@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Elyra — Chat</title>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/screens.css"/>
+  <style>
+    /* Read receipt */
+    .read-receipt {
+      font-size: 0.65rem;
+      color: var(--accent);
+      text-align: right;
+      padding-right: 4px;
+      margin-top: -2px;
+      margin-bottom: 4px;
+    }
+
+    /* Level up toast */
+    .levelup-toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      background: linear-gradient(135deg, var(--accent), var(--pink));
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: var(--r-full);
+      white-space: nowrap;
+      z-index: 200;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(168,85,247,0.4);
+    }
+    .levelup-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Personality switch chips in modal */
+    .pswitch-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--r-lg);
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+    .pswitch-item:hover { border-color: var(--accent); }
+    .pswitch-item.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .pswitch-emoji { font-size: 1.3rem; flex-shrink: 0; }
+    .pswitch-info { flex: 1; }
+    .pswitch-name {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .pswitch-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .pswitch-check { color: var(--accent); font-size: 1.1rem; }
+
+    /* Memory modal items */
+    .mem-empty {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Swipe-back gesture hint */
+    .back-hint {
+      position: fixed;
+      left: 0; top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 48px;
+      background: linear-gradient(to bottom, transparent, var(--accent), transparent);
+      border-radius: 0 3px 3px 0;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Sending animation on bubble */
+    @keyframes sendPop {
+      0%   { transform: scale(0.9); opacity: 0.5; }
+      60%  { transform: scale(1.02); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .bubble-sending { animation: sendPop 0.3s ease both; }
+  </style>
+</head>
+<body>
+  <div class="back-hint"></div>
+
+  <div class="chat-page" id="chat-page">
+
+    <!-- Header -->
+    <div class="chat-header" id="chat-header">
+      <button class="btn-icon" onclick="goBack()" style="background:none;border:none;" title="Back">
+        ←
+      </button>
+      <div class="avatar avatar-sm" id="header-avatar" onclick="openCompanionModal()">🌸</div>
+      <div class="chat-header-info" onclick="openCompanionModal()">
+        <div class="chat-header-name" id="header-name">Loading...</div>
+        <div class="chat-header-status" id="header-status">online</div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="btn-icon" id="btn-personality" onclick="openPersonalityModal()" title="Switch personality">🎭</button>
+        <button class="btn-icon" id="btn-memory"      onclick="openMemoryModal()"      title="View memory">🧠</button>
+        <button class="btn-icon"                       onclick="openCompanionModal()"   title="Profile">⚙️</button>
+      </div>
+    </div>
+
+    <!-- XP strip -->
+    <div class="chat-xp-strip" id="xp-strip">
+      <div class="xp-bar-wrap">
+        <div class="xp-labels">
+          <span class="xp-level" id="xp-level">Lv 1</span>
+          <span class="xp-points" id="xp-points">0 / 100 XP</span>
+        </div>
+        <div class="xp-bar">
+          <div class="xp-fill" id="xp-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Limit banner area -->
+    <div class="chat-banner-area" id="banner-area"></div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chat-messages">
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Input -->
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea
+          class="chat-textarea"
+          id="chat-input"
+          placeholder="Message..."
+          rows="1"
+          maxlength="1000"
+          oninput="handleInput(this)"
+          onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button class="chat-send-btn" id="send-btn" onclick="sendMessage()" disabled>
+          ➤
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Level Up Toast -->
+  <div class="levelup-toast" id="levelup-toast">🎉 Level Up!</div>
+
+  <!-- ── Personality Switch Modal ── -->
+  <div class="modal-overlay hidden" id="personality-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Switch Personality 🎭</div>
+      <div class="personality-switch-grid" id="personality-switch-grid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Memory Modal ── -->
+  <div class="modal-overlay hidden" id="memory-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">What I Remember 🧠</div>
+      <div id="memory-content">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Companion Profile Modal ── -->
+  <div class="modal-overlay hidden" id="companion-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="companion-detail" id="companion-detail">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/prompt.js"></script>
+  <script src="js/memory.js"></script>
+  <script src="js/mood.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // ── State ──
+    let companion   = null;
+    let userProfile = null;
+    let chatHistory = [];
+    let isTyping    = false;
+    let limitBannerShown = false;
+    let switchedBannerShown = false;
+
+    const PERSONALITIES = [
+      { id:'sympathy',  emoji:'🥺', name:'Sympathy Mode',  desc:'Emotionally supportive' },
+      { id:'sarcastic', emoji:'😏', name:'Sarcastic',      desc:'Witty and dry' },
+      { id:'flirty',    emoji:'😘', name:'Flirty',         desc:'Playful and charming' },
+      { id:'dramatic',  emoji:'😭', name:'Dramatic',       desc:'Wonderfully extra' },
+      { id:'roast',     emoji:'🔥', name:'Roast Machine',  desc:'Lovingly ruthless' },
+    ];
+
+    // ── Init ──
+    window.addEventListener('DOMContentLoaded', () => {
+      const id = App.getParam('id') || Storage.getActiveCompanionId();
+      if (!id) { window.location.href = 'home.html'; return; }
+
+      companion   = Storage.getCompanion(id);
+      userProfile = Storage.getProfile();
+      if (!companion) { window.location.href = 'home.html'; return; }
+
+      Storage.setActiveCompanionId(id);
+      chatHistory = Storage.getChatHistory(id);
+
+      renderHeader();
+      renderXP();
+      renderMessages(true);
+      buildPersonalityGrid();
+
+      // First time greeting
+      if (chatHistory.length === 0) {
+        setTimeout(() => sendGreeting(), 800);
+      } else {
+        scrollBottom(false);
+      }
+
+      // Focus input after small delay
+      setTimeout(() => document.getElementById('chat-input')?.focus(), 400);
+    });
+
+    // ── Header ──
+    function renderHeader() {
+      document.title = `${companion.name} — Elyra`;
+      document.getElementById('header-avatar').textContent = companion.avatar || '🌸';
+      document.getElementById('header-avatar').className = `avatar avatar-sm avatar-${companion.relation}`;
+      document.getElementById('header-name').textContent   = companion.name;
+
+      const rel  = App.getRelationDisplay(companion.relation);
+      const pers = App.getPersonalityDisplay(companion.personality);
+      document.getElementById('header-status').innerHTML =
+        `${rel.emoji} ${rel.label} &nbsp;·&nbsp; ${pers.emoji} ${pers.label}`;
+    }
+
+    // ── XP Bar ──
+    function renderXP() {
+      const xp = Storage.getXPProgress(companion.id);
+      document.getElementById('xp-level').textContent  = `Lv ${xp.level}`;
+      document.getElementById('xp-points').textContent = `${xp.xp} / ${xp.max} XP`;
+      document.getElementById('xp-fill').style.width   = xp.percent + '%';
+    }
+
+    // ── Messages ──
+    function renderMessages(initial = false) {
+      const container = document.getElementById('chat-messages');
+      if (chatHistory.length === 0) { container.innerHTML = ''; return; }
+
+      let html = '';
+      let prevDate = null;
+
+      chatHistory.forEach((msg, i) => {
+        const date  = new Date(msg.timestamp).toDateString();
+        const isNew = date !== prevDate;
+        prevDate = date;
+
+        if (isNew) {
+          const label = getDateLabel(msg.timestamp);
+          html += `<div class="date-divider"><span>${label}</span></div>`;
+        }
+
+        const time = App.formatChatTime(msg.timestamp);
+        const isLast = i === chatHistory.length - 1;
+
+        if (msg.role === 'user') {
+          html += `
+            <div class="bubble-wrap user">
+              <div>
+                <div class="bubble">${escHtml(msg.text)}</div>
+                <div class="bubble-time">${time}</div>
+                ${isLast ? '<div class="read-receipt">Seen 💜</div>' : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bubble-wrap bot">
+              <div class="avatar avatar-sm" style="align-self:flex-end;font-size:1rem;">${companion.avatar || '🌸'}</div>
+              <div>
+                <div class="bubble">${escHtml(msg.text)}</div>
+                <div class="bubble-time">${time}</div>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      container.innerHTML = html;
+      scrollBottom(!initial);
+    }
+
+    function appendMessageToDOM(msg) {
+      const container = document.getElementById('chat-messages');
+      const time = App.formatChatTime(msg.timestamp);
+      const div  = document.createElement('div');
+
+      if (msg.role === 'user') {
+        div.className = 'bubble-wrap user';
+        div.innerHTML = `
+          <div>
+            <div class="bubble bubble-sending">${escHtml(msg.text)}</div>
+            <div class="bubble-time">${time}</div>
+          </div>
+        `;
+      } else {
+        div.className = 'bubble-wrap bot';
+        div.innerHTML = `
+          <div class="avatar avatar-sm" style="align-self:flex-end;font-size:1rem;">${companion.avatar || '🌸'}</div>
+          <div>
+            <div class="bubble bubble-sending">${escHtml(msg.text)}</div>
+            <div class="bubble-time">${time}</div>
+          </div>
+        `;
+      }
+
+      // Remove old read receipts
+      document.querySelectorAll('.read-receipt').forEach(r => r.remove());
+
+      // Add read receipt to last user message
+      if (msg.role === 'bot') {
+        const lastUser = [...container.querySelectorAll('.bubble-wrap.user')].pop();
+        if (lastUser) {
+          const receipt = document.createElement('div');
+          receipt.className = 'read-receipt';
+          receipt.textContent = 'Seen 💜';
+          lastUser.querySelector('div')?.appendChild(receipt);
+        }
+      }
+
+      container.appendChild(div);
+      scrollBottom(true);
+    }
+
+    // ── Typing Indicator ──
+    function showTyping() {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.id = 'typing-indicator-wrap';
+      div.className = 'bubble-wrap bot';
+      div.innerHTML = `
+        <div class="avatar avatar-sm" style="align-self:flex-end;font-size:1rem;">${companion.avatar || '🌸'}</div>
+        <div class="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      `;
+      container.appendChild(div);
+      scrollBottom(true);
+    }
+
+    function hideTyping() {
+      document.getElementById('typing-indicator-wrap')?.remove();
+    }
+
+    // ── Send ──
+    async function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const text  = input.value.trim();
+      if (!text || isTyping) return;
+      if (!App.canSend(1500)) return;
+
+      // Clear input
+      input.value = '';
+      input.style.height = 'auto';
+      document.getElementById('send-btn').disabled = true;
+
+      // Save + show user message
+      const userMsg = Storage.createMessage('user', text);
+      Storage.appendMessage(companion.id, userMsg);
+      chatHistory = Storage.getChatHistory(companion.id);
+      appendMessageToDOM(userMsg);
+
+      // Process memory from user message
+      Memory.processMessage(companion.id, text, 'user');
+
+      // Show typing
+      isTyping = true;
+      showTyping();
+
+      // Build system prompt with mood injection
+      const memory       = Storage.getMemory(companion.id);
+      let   systemPrompt = Prompt.build({ companion, userProfile, memory });
+      systemPrompt = Mood.injectIntoPrompt(systemPrompt, chatHistory.slice(-6), companion);
+      Mood.updateLastActive(companion.id);
+
+      // Call API
+      const result = await API.send({
+        systemPrompt,
+        chatHistory: chatHistory.slice(0, -1), // exclude the msg we just added
+        userMessage: text,
+      });
+
+      hideTyping();
+      isTyping = false;
+
+      // Handle switched to backup banner
+      if (result.switchedToBackup && !switchedBannerShown) {
+        switchedBannerShown = true;
+        showBanner(
+          API.getLimitMessage(companion, userProfile),
+          'warning',
+          true // dismissable
+        );
+      }
+
+      // Handle both limits hit
+      if (result.bothLimitsHit && !limitBannerShown) {
+        limitBannerShown = true;
+        showBanner('⚡ Daily AI limit reached on both services. Responses paused until tomorrow.', 'warning', false);
+        return;
+      }
+
+      // Handle errors
+      if (result.error && !result.text) {
+        showBanner(API.getErrorMessage(result.error), 'warning', true);
+        return;
+      }
+
+      if (!result.text) {
+        showBanner('😕 No response received. Please try again.', 'warning', true);
+        return;
+      }
+
+      // Save + show bot message
+      const botMsg = Storage.createMessage('bot', result.text);
+      Storage.appendMessage(companion.id, botMsg);
+      chatHistory = Storage.getChatHistory(companion.id);
+      appendMessageToDOM(botMsg);
+
+      // Process memory from bot message (for any facts bot surfaces)
+      Memory.processMessage(companion.id, result.text, 'bot');
+
+      // XP
+      const xpResult = Storage.addXP(companion.id, 10);
+      companion = Storage.getCompanion(companion.id);
+      renderXP();
+      if (xpResult?.leveledUp) showLevelUp(xpResult.level);
+
+      // Check if summary needed (async, non-blocking)
+      if (Memory.needsSummary(companion.id)) {
+        const keys = Storage.getApiKeys();
+        Memory.generateSummary(companion.id, keys).catch(() => {});
+      }
+    }
+
+    // ── Greeting ──
+    async function sendGreeting() {
+      isTyping = true;
+      showTyping();
+
+      const memory       = Storage.getMemory(companion.id);
+      const systemPrompt = Prompt.build({ companion, userProfile, memory });
+      const keys         = Storage.getApiKeys();
+
+      if (!keys.gemini && !keys.groq) {
+        hideTyping();
+        isTyping = false;
+        showBanner('🔑 Add API keys in Settings to start chatting!', 'info', false);
+        return;
+      }
+
+      const userName  = userProfile?.name || 'there';
+      const timeOfDay = App.getTimeOfDay();
+
+      const greetPrompt = `Start the conversation with a natural, in-character opening message. It's ${timeOfDay}. The user's name is ${userName}. Keep it short (1-2 sentences). Be natural, don't be formal.`;
+
+      const result = await API.send({
+        systemPrompt,
+        chatHistory: [],
+        userMessage: greetPrompt,
+      });
+
+      hideTyping();
+      isTyping = false;
+
+      if (result.text) {
+        const botMsg = Storage.createMessage('bot', result.text);
+        Storage.appendMessage(companion.id, botMsg);
+        chatHistory = Storage.getChatHistory(companion.id);
+        appendMessageToDOM(botMsg);
+      }
+    }
+
+    // ── Input handling ──
+    function handleInput(textarea) {
+      App.autoResize(textarea);
+      document.getElementById('send-btn').disabled = !textarea.value.trim();
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    // ── Banner ──
+    function showBanner(message, type = 'warning', dismissable = true) {
+      const area = document.getElementById('banner-area');
+      area.innerHTML = `
+        <div class="banner banner-${type}">
+          <span>${message}</span>
+          ${dismissable ? '<button class="banner-close" onclick="closeBanner()">✕</button>' : ''}
+        </div>
+      `;
+    }
+
+    function closeBanner() {
+      document.getElementById('banner-area').innerHTML = '';
+    }
+
+    // ── Level Up ──
+    function showLevelUp(level) {
+      const el = document.getElementById('levelup-toast');
+      el.textContent = `🎉 Level ${level}! Your bond is growing!`;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ── Personality Modal ──
+    function buildPersonalityGrid() {
+      const grid = document.getElementById('personality-switch-grid');
+      grid.innerHTML = PERSONALITIES.map(p => `
+        <div class="pswitch-item ${companion.personality === p.id ? 'active' : ''}"
+             onclick="switchPersonality('${p.id}')">
+          <div class="pswitch-emoji">${p.emoji}</div>
+          <div class="pswitch-info">
+            <div class="pswitch-name">${p.name}</div>
+            <div class="pswitch-desc">${p.desc}</div>
+          </div>
+          ${companion.personality === p.id ? '<div class="pswitch-check">✓</div>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function switchPersonality(id) {
+      Storage.updateCompanion(companion.id, { personality: id });
+      companion = Storage.getCompanion(companion.id);
+      buildPersonalityGrid();
+      closePersonalityModal();
+      renderHeader();
+      App.toast(`Switched to ${App.getPersonalityDisplay(id).label} ${App.getPersonalityDisplay(id).emoji}`);
+    }
+
+    function openPersonalityModal() {
+      buildPersonalityGrid();
+      document.getElementById('personality-modal').classList.remove('hidden');
+    }
+    function closePersonalityModal() {
+      document.getElementById('personality-modal').classList.add('hidden');
+    }
+
+    // ── Memory Modal ──
+    function openMemoryModal() {
+      const mem     = Memory.getMemoryDisplay(companion.id);
+      const content = document.getElementById('memory-content');
+      let html = '';
+
+      if (mem.pinned.length === 0 && !mem.summary) {
+        html = `<div class="mem-empty">No memories yet 🌱<br/><span style="font-size:0.78rem;color:var(--text-dim);">Keep chatting and I'll start remembering things about you!</span></div>`;
+      } else {
+        if (mem.pinned.length > 0) {
+          html += `<div class="memory-list">`;
+          mem.pinned.forEach(p => {
+            html += `
+              <div class="memory-item">
+                <div class="memory-key">${escHtml(p.key)}</div>
+                <div class="memory-value">${escHtml(p.value)}</div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+        if (mem.summary) {
+          html += `
+            <div style="margin-top:12px;">
+              <div class="label" style="margin-bottom:8px;">Conversation summary</div>
+              <div class="memory-summary">${escHtml(mem.summary)}</div>
+            </div>
+          `;
+        }
+      }
+
+      content.innerHTML = html;
+      document.getElementById('memory-modal').classList.remove('hidden');
+    }
+    function closeMemoryModal() {
+      document.getElementById('memory-modal').classList.add('hidden');
+    }
+
+    // ── Companion Profile Modal ──
+    function openCompanionModal() {
+      const rel  = App.getRelationDisplay(companion.relation);
+      const pers = App.getPersonalityDisplay(companion.personality);
+      const xp   = Storage.getXPProgress(companion.id);
+
+      document.getElementById('companion-detail').innerHTML = `
+        <div class="avatar avatar-xl avatar-${companion.relation}" style="font-size:3rem;">${companion.avatar}</div>
+        <div class="companion-detail-name">${escHtml(companion.name)}</div>
+        <div class="companion-detail-tags">
+          <span class="relation-tag">${rel.emoji} ${rel.label}</span>
+          <span class="relation-tag">${pers.emoji} ${pers.label}</span>
+          <span class="relation-tag">⭐ Level ${xp.level}</span>
+        </div>
+        <div class="xp-bar-wrap w-full" style="margin-top:4px;">
+          <div class="xp-labels">
+            <span class="xp-level">Lv ${xp.level}</span>
+            <span class="xp-points">${xp.xp} / ${xp.max} XP</span>
+          </div>
+          <div class="xp-bar"><div class="xp-fill" style="width:${xp.percent}%"></div></div>
+        </div>
+        <div class="companion-detail-actions">
+          <button class="btn btn-secondary btn-sm" onclick="closeCompanionModal()">Close</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="clearChat()">Clear Chat</button>
+        </div>
+      `;
+      document.getElementById('companion-modal').classList.remove('hidden');
+    }
+    function closeCompanionModal() {
+      document.getElementById('companion-modal').classList.add('hidden');
+    }
+
+    function clearChat() {
+      if (!confirm(`Clear all messages with ${companion.name}?`)) return;
+      Storage.saveChatHistory(companion.id, []);
+      chatHistory = [];
+      document.getElementById('chat-messages').innerHTML = '';
+      closeCompanionModal();
+      App.toast('Chat cleared 🗑️');
+      setTimeout(() => sendGreeting(), 600);
+    }
+
+    // ── Navigation ──
+    function goBack() {
+      document.getElementById('chat-page').style.transition = 'opacity 0.2s';
+      document.getElementById('chat-page').style.opacity    = '0';
+      setTimeout(() => window.location.href = 'home.html', 200);
+    }
+
+    // ── Scroll ──
+    function scrollBottom(smooth = true) {
+      App.scrollToBottom(document.getElementById('chat-messages'), smooth);
+    }
+
+    // ── Date label ──
+    function getDateLabel(timestamp) {
+      const date    = new Date(timestamp);
+      const today   = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      if (date.toDateString() === today.toDateString())     return 'Today';
+      if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      return date.toLocaleDateString([], { weekday:'long', month:'short', day:'numeric' });
+    }
+
+    // ── Close modals on overlay click ──
+    ['personality-modal','memory-modal','companion-modal'].forEach(id => {
+      document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) this.classList.add('hidden');
+      });
+    });
+
+    // ── Utility ──
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Elyra</title>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/screens.css"/>
+  <style>
+    /* Companion item hover reveal delete */
+    .companion-item {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .companion-delete-btn {
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: #f87171;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: right var(--t-normal), opacity var(--t-fast);
+      opacity: 0;
+    }
+    .companion-item.swiped .companion-delete-btn {
+      right: 12px;
+      opacity: 1;
+    }
+
+    /* Companion avatar glow based on relation */
+    .avatar-girlfriend { box-shadow: 0 0 16px rgba(236,72,153,0.3); border-color: rgba(236,72,153,0.4); }
+    .avatar-bestfriend { box-shadow: 0 0 16px rgba(168,85,247,0.3); border-color: rgba(168,85,247,0.4); }
+    .avatar-sister     { box-shadow: 0 0 16px rgba(251,191,36,0.25); border-color: rgba(251,191,36,0.3); }
+    .avatar-crush      { box-shadow: 0 0 16px rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.3); }
+
+    /* Unread dot */
+    .unread-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      box-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    /* Stagger animation for list items */
+    .companion-item { animation: fadeUp 0.35s ease both; }
+    .companion-item:nth-child(1) { animation-delay: 0.05s; }
+    .companion-item:nth-child(2) { animation-delay: 0.10s; }
+    .companion-item:nth-child(3) { animation-delay: 0.15s; }
+    .companion-item:nth-child(4) { animation-delay: 0.20s; }
+    .companion-item:nth-child(5) { animation-delay: 0.25s; }
+
+    /* Section label */
+    .list-label {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 12px 20px 4px;
+    }
+
+    /* Confirm delete modal */
+    .confirm-modal-body {
+      text-align: center;
+      padding: 8px 0;
+    }
+    .confirm-modal-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .confirm-modal-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .confirm-modal-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .confirm-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-top"></div>
+
+  <div class="home-page" id="home-page">
+
+    <!-- Header -->
+    <div class="home-header" id="home-header">
+      <div class="home-header-left">
+        <div class="home-greeting" id="home-greeting">Good morning</div>
+        <div class="home-title" id="home-title">Companions</div>
+      </div>
+      <div class="home-header-right">
+        <button class="btn-icon" onclick="window.location.href='settings.html'" title="Settings">⚙️</button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input
+        class="search-input"
+        id="search-input"
+        type="text"
+        placeholder="Search companions..."
+        oninput="handleSearch(this.value)"
+        autocomplete="off"
+      />
+    </div>
+
+    <!-- List -->
+    <div class="companions-list" id="companions-list">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" onclick="addCompanion()">
+      ✦ New Companion
+    </button>
+
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal-overlay hidden" id="delete-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="confirm-modal-body">
+        <div class="confirm-modal-icon">💔</div>
+        <div class="confirm-modal-title">Delete Companion?</div>
+        <p class="confirm-modal-sub">This will permanently delete <strong id="delete-name"></strong> and all your chat history together.</p>
+        <div class="confirm-modal-actions">
+          <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+          <button class="btn" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:var(--r-full);" onclick="confirmDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let companions   = [];
+    let filtered     = [];
+    let deleteTarget = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadHome();
+    });
+
+    function loadHome() {
+      const profile = Storage.getProfile();
+      if (profile) {
+        document.getElementById('home-greeting').textContent = App.getGreeting(profile.name);
+      }
+
+      companions = Storage.getCompanions();
+      filtered   = [...companions];
+      renderList();
+
+      // Header scroll
+      App.initHeaderScroll(
+        document.getElementById('home-header'),
+        document.getElementById('companions-list')
+      );
+    }
+
+    function renderList() {
+      const container = document.getElementById('companions-list');
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state anim-fade-in">
+            <div class="empty-icon">💜</div>
+            <div class="empty-title">${companions.length === 0 ? 'No companions yet' : 'No results'}</div>
+            <p class="empty-sub">${companions.length === 0
+              ? 'Create your first companion and start a conversation!'
+              : 'Try a different search term.'
+            }</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort by last message time (most recent first)
+      const sorted = [...filtered].sort((a, b) => {
+        const ta = a.lastMessageTime || a.createdAt || 0;
+        const tb = b.lastMessageTime || b.createdAt || 0;
+        return tb - ta;
+      });
+
+      container.innerHTML = `
+        <div class="list-label">Messages</div>
+        <div class="companions-section" id="companions-section">
+          ${sorted.map(c => renderCompanionItem(c)).join('')}
+        </div>
+      `;
+
+      // Touch/swipe to reveal delete
+      document.querySelectorAll('.companion-item').forEach(item => {
+        let startX = 0;
+        item.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+        item.addEventListener('touchend', e => {
+          const dx = e.changedTouches[0].clientX - startX;
+          if (dx < -50) item.classList.add('swiped');
+          if (dx > 20)  item.classList.remove('swiped');
+        });
+        // Close swipe on outside tap
+        document.addEventListener('touchstart', e => {
+          if (!item.contains(e.target)) item.classList.remove('swiped');
+        }, { passive: true });
+      });
+    }
+
+    function renderCompanionItem(c) {
+      const rel  = App.getRelationDisplay(c.relation);
+      const pers = App.getPersonalityDisplay(c.personality);
+      const xp   = Storage.getXPProgress(c.id);
+      const time = App.formatTime(c.lastMessageTime || c.createdAt);
+      const preview = c.lastMessage
+        ? escHtml(c.lastMessage)
+        : `${rel.emoji} ${rel.label} · ${pers.emoji} ${pers.label}`;
+
+      return `
+        <div class="companion-item" onclick="openChat('${c.id}')" id="item-${c.id}">
+          <div class="avatar avatar-${c.relation}" style="font-size:1.6rem;">
+            ${c.avatar || '🌸'}
+          </div>
+          <div class="companion-info">
+            <div class="companion-name">${escHtml(c.name)}</div>
+            <div class="companion-preview">${preview}</div>
+          </div>
+          <div class="companion-meta">
+            <div class="companion-time">${time}</div>
+            ${c.level > 1 ? `<div class="companion-badge">Lv ${c.level}</div>` : ''}
+          </div>
+          <button class="companion-delete-btn" onclick="promptDelete(event, '${c.id}')">🗑️</button>
+        </div>
+      `;
+    }
+
+    function openChat(id) {
+      Storage.setActiveCompanionId(id);
+      // Fade transition
+      document.getElementById('home-page').style.transition = 'opacity 0.2s';
+      document.getElementById('home-page').style.opacity    = '0';
+      setTimeout(() => {
+        window.location.href = `chat.html?id=${id}`;
+      }, 200);
+    }
+
+    function addCompanion() {
+      // Re-run onboarding for new companion creation
+      // We flag this as "adding" not fresh start
+      sessionStorage.setItem('elyra_adding_companion', 'true');
+      window.location.href = 'onboarding.html';
+    }
+
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        filtered = [...companions];
+      } else {
+        filtered = companions.filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          c.relation.toLowerCase().includes(q) ||
+          c.personality.toLowerCase().includes(q)
+        );
+      }
+      renderList();
+    }
+
+    // ── Delete ──
+    function promptDelete(e, id) {
+      e.stopPropagation();
+      deleteTarget = id;
+      const c = Storage.getCompanion(id);
+      if (c) document.getElementById('delete-name').textContent = c.name;
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('delete-modal').classList.add('hidden');
+      deleteTarget = null;
+    }
+
+    function confirmDelete() {
+      if (!deleteTarget) return;
+      Storage.deleteCompanion(deleteTarget);
+      companions = Storage.getCompanions();
+      filtered   = [...companions];
+      closeDeleteModal();
+      renderList();
+      App.toast('Companion deleted 💔');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('delete-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeDeleteModal();
+    });
+
+    // ── Utility ──
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Elyra — Settings</title>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/screens.css"/>
+</head>
+<body>
+  <div class="ambient-top"></div>
+
+  <div class="settings-page">
+
+    <!-- Header -->
+    <div class="settings-header">
+      <button class="btn-icon" onclick="goBack()" style="background:none;border:none;">←</button>
+      <div class="settings-title">Settings</div>
+    </div>
+
+    <div class="settings-scroll">
+
+      <!-- Profile block -->
+      <div class="profile-block anim-fade-up">
+        <div class="avatar avatar-lg" id="profile-avatar">👤</div>
+        <div class="profile-block-info">
+          <div class="profile-block-name" id="profile-name">—</div>
+          <div class="profile-block-meta" id="profile-meta">—</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openEditProfile()">Edit</button>
+      </div>
+
+      <!-- API Keys -->
+      <div class="settings-section anim-fade-up delay-1">
+        <div class="settings-section-label">AI Connection</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openKeySettings()">
+            <div class="settings-row-icon icon-purple">🔑</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">API Keys</div>
+              <div class="settings-row-sub" id="key-status">Checking...</div>
+            </div>
+            <div class="settings-row-right">›</div>
+          </div>
+          <div class="settings-row" onclick="openModelInfo()">
+            <div class="settings-row-icon icon-blue">🤖</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">AI Models</div>
+              <div class="settings-row-sub">Gemini 2.5 Flash-Lite + Groq</div>
+            </div>
+            <div class="settings-row-right">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Privacy -->
+      <div class="settings-section anim-fade-up delay-2">
+        <div class="settings-section-label">Privacy & Security</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="togglePin()">
+            <div class="settings-row-icon icon-green">🔒</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">App Lock</div>
+              <div class="settings-row-sub">Require PIN to open app</div>
+            </div>
+            <div class="toggle" id="pin-toggle"></div>
+          </div>
+          <div class="settings-row" id="change-pin-row" onclick="openChangePin()" style="display:none;">
+            <div class="settings-row-icon icon-green">🔐</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">Change PIN</div>
+              <div class="settings-row-sub">Update your 4-digit PIN</div>
+            </div>
+            <div class="settings-row-right">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="settings-section anim-fade-up delay-3">
+        <div class="settings-section-label">Data</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="exportData()">
+            <div class="settings-row-icon icon-blue">📤</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">Export Chats</div>
+              <div class="settings-row-sub">Download all conversations as JSON</div>
+            </div>
+            <div class="settings-row-right">›</div>
+          </div>
+          <div class="settings-row" onclick="clearAllMemory()">
+            <div class="settings-row-icon icon-orange">🧠</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">Clear All Memory</div>
+              <div class="settings-row-sub">Wipe what companions remember</div>
+            </div>
+            <div class="settings-row-right">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="settings-section anim-fade-up delay-4">
+        <div class="settings-section-label">About</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-row-icon icon-purple">💜</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">Version</div>
+              <div class="settings-row-sub">1.0.0 — Trial</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-icon icon-blue">🔒</div>
+            <div class="settings-row-info">
+              <div class="settings-row-title">Privacy</div>
+              <div class="settings-row-sub">All data stored locally on your device</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="settings-section anim-fade-up delay-5">
+        <div class="settings-section-label">Danger Zone</div>
+        <button class="danger-btn" onclick="clearAllData()">
+          🗑️ Clear All Data & Reset App
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Edit Profile Modal ── -->
+  <div class="modal-overlay hidden" id="profile-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Edit Profile</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="input-group">
+          <div class="input-label">Your Name</div>
+          <input class="input-field" id="edit-name" type="text" maxlength="30"/>
+        </div>
+        <div class="input-group">
+          <div class="input-label">Gender</div>
+          <div class="gender-grid">
+            <div class="gender-card" data-gender="male" onclick="selectEditGender('male')">
+              <div class="icon">👨</div><div class="name">Male</div>
+            </div>
+            <div class="gender-card" data-gender="female" onclick="selectEditGender('female')">
+              <div class="icon">👩</div><div class="name">Female</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── API Keys Modal ── -->
+  <div class="modal-overlay hidden" id="keys-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🔑 API Keys</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:12px;">
+          <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6;">
+            Your keys are saved <strong>only on your device</strong>. They go directly to Google/Groq — never to any other server. 🔒
+          </div>
+        </div>
+
+        <!-- Gemini -->
+        <div class="input-group">
+          <div class="input-label">✨ Gemini API Key <span style="color:var(--success);font-size:0.65rem;">FREE</span></div>
+          <div class="input-wrap">
+            <input class="input-field has-icon" id="settings-gemini-key" type="password" placeholder="AIza..." autocomplete="off" spellcheck="false"/>
+            <button class="input-icon" onclick="toggleSettingsKey('settings-gemini-key',this)">👁️</button>
+          </div>
+          <div class="input-hint"><a href="https://aistudio.google.com/app/apikey" target="_blank">Get free key → aistudio.google.com ↗</a></div>
+        </div>
+
+        <!-- Groq -->
+        <div class="input-group">
+          <div class="input-label">⚡ Groq API Key <span style="color:var(--success);font-size:0.65rem;">FREE</span></div>
+          <div class="input-wrap">
+            <input class="input-field has-icon" id="settings-groq-key" type="password" placeholder="gsk_..." autocomplete="off" spellcheck="false"/>
+            <button class="input-icon" onclick="toggleSettingsKey('settings-groq-key',this)">👁️</button>
+          </div>
+          <div class="input-hint"><a href="https://console.groq.com/keys" target="_blank">Get free key → console.groq.com ↗</a></div>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="saveKeys()">Save Keys</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Model Info Modal ── -->
+  <div class="modal-overlay hidden" id="model-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🤖 AI Models Used</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;">
+          <div style="font-family:var(--font-display);font-size:0.9rem;font-weight:700;margin-bottom:6px;">✨ Primary — Gemini 2.5 Flash-Lite</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;">
+            Google's fastest free model.<br/>
+            Free limits: <strong>15 requests/min · 1,000/day</strong>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;">
+          <div style="font-family:var(--font-display);font-size:0.9rem;font-weight:700;margin-bottom:6px;">✨ Secondary — Gemini 2.5 Flash</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;">
+            Used when Flash-Lite hits limits.<br/>
+            Free limits: <strong>10 requests/min · 250/day</strong>
+          </div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;">
+          <div style="font-family:var(--font-display);font-size:0.9rem;font-weight:700;margin-bottom:6px;">⚡ Backup — Groq Llama 3.1 8B</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;">
+            Ultra-fast backup when Gemini limits hit.<br/>
+            Free limits: <strong>30 requests/min · 14,400/day</strong>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary btn-full" onclick="closeModelModal()">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PIN Setup Modal ── -->
+  <div class="modal-overlay hidden" id="pin-modal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="pin-modal-title">Set App PIN</div>
+
+      <div style="display:flex;flex-direction:column;gap:24px;align-items:center;">
+        <p class="caption text-center" id="pin-modal-sub">Choose a 4-digit PIN to lock your app</p>
+
+        <!-- Dots -->
+        <div class="pin-grid" id="modal-pin-dots">
+          <div class="pin-dot" id="mpd-0"></div>
+          <div class="pin-dot" id="mpd-1"></div>
+          <div class="pin-dot" id="mpd-2"></div>
+          <div class="pin-dot" id="mpd-3"></div>
+        </div>
+
+        <div class="pin-error hidden" id="pin-modal-error"></div>
+
+        <!-- Keypad -->
+        <div class="pin-keypad">
+          <button class="pin-key" onclick="pinKeyPress('1')">1</button>
+          <button class="pin-key" onclick="pinKeyPress('2')">2</button>
+          <button class="pin-key" onclick="pinKeyPress('3')">3</button>
+          <button class="pin-key" onclick="pinKeyPress('4')">4</button>
+          <button class="pin-key" onclick="pinKeyPress('5')">5</button>
+          <button class="pin-key" onclick="pinKeyPress('6')">6</button>
+          <button class="pin-key" onclick="pinKeyPress('7')">7</button>
+          <button class="pin-key" onclick="pinKeyPress('8')">8</button>
+          <button class="pin-key" onclick="pinKeyPress('9')">9</button>
+          <div class="pin-key empty"></div>
+          <button class="pin-key" onclick="pinKeyPress('0')">0</button>
+          <button class="pin-key delete" onclick="pinKeyPress('del')">⌫</button>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" onclick="closePinModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let pinModalMode   = 'set';   // 'set' | 'confirm' | 'change'
+    let pinFirstEntry  = '';
+    let pinCurrentEntry = '';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+    });
+
+    function loadSettings() {
+      const profile = Storage.getProfile();
+      if (profile) {
+        document.getElementById('profile-avatar').textContent = profile.gender === 'female' ? '👩' : '👨';
+        document.getElementById('profile-name').textContent   = profile.name;
+        document.getElementById('profile-meta').textContent   = `${profile.gender === 'female' ? 'Female' : 'Male'} · App User`;
+      }
+
+      const keys = Storage.getApiKeys();
+      const geminiSet = !!keys.gemini;
+      const groqSet   = !!keys.groq;
+      let keyStatus = '';
+      if (geminiSet && groqSet)  keyStatus = '✅ Gemini + Groq connected';
+      else if (geminiSet)        keyStatus = '✅ Gemini connected · Groq missing';
+      else if (groqSet)          keyStatus = '✅ Groq connected · Gemini missing';
+      else                       keyStatus = '⚠️ No keys added';
+      document.getElementById('key-status').textContent = keyStatus;
+
+      const pinEnabled = Storage.isPinEnabled();
+      const toggle = document.getElementById('pin-toggle');
+      toggle.classList.toggle('on', pinEnabled);
+      document.getElementById('change-pin-row').style.display = pinEnabled ? 'flex' : 'none';
+    }
+
+    // ── Profile ──
+    function openEditProfile() {
+      const profile = Storage.getProfile();
+      document.getElementById('edit-name').value = profile?.name || '';
+      const gender = profile?.gender || 'male';
+      document.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
+      document.querySelector(`[data-gender="${gender}"]`)?.classList.add('selected');
+      document.getElementById('profile-modal').classList.remove('hidden');
+    }
+
+    function selectEditGender(gender) {
+      document.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
+      document.querySelector(`[data-gender="${gender}"]`)?.classList.add('selected');
+    }
+
+    function saveProfile() {
+      const name   = document.getElementById('edit-name').value.trim();
+      const gender = document.querySelector('.gender-card.selected')?.dataset.gender || 'male';
+      if (!name) { App.toast('Please enter your name'); return; }
+      Storage.setProfile({ name, gender });
+      document.getElementById('profile-modal').classList.add('hidden');
+      loadSettings();
+      App.toast('Profile updated ✅');
+    }
+
+    // ── Keys ──
+    function openKeySettings() {
+      const keys = Storage.getApiKeys();
+      document.getElementById('settings-gemini-key').value = keys.gemini || '';
+      document.getElementById('settings-groq-key').value   = keys.groq   || '';
+      document.getElementById('keys-modal').classList.remove('hidden');
+    }
+
+    function saveKeys() {
+      const gemini = document.getElementById('settings-gemini-key').value.trim();
+      const groq   = document.getElementById('settings-groq-key').value.trim();
+      Storage.setApiKeys(gemini, groq);
+      document.getElementById('keys-modal').classList.add('hidden');
+      loadSettings();
+      App.toast('Keys saved 🔑');
+    }
+
+    function toggleSettingsKey(inputId, btn) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.textContent = input.type === 'password' ? '👁️' : '🙈';
+    }
+
+    // ── Model info ──
+    function openModelInfo() {
+      document.getElementById('model-modal').classList.remove('hidden');
+    }
+    function closeModelModal() {
+      document.getElementById('model-modal').classList.add('hidden');
+    }
+
+    // ── PIN ──
+    function togglePin() {
+      const enabled = Storage.isPinEnabled();
+      if (!enabled) {
+        // Enable — set a new PIN
+        pinModalMode   = 'set';
+        pinFirstEntry  = '';
+        pinCurrentEntry = '';
+        document.getElementById('pin-modal-title').textContent = 'Set App PIN';
+        document.getElementById('pin-modal-sub').textContent   = 'Choose a 4-digit PIN';
+        document.getElementById('pin-modal-error').classList.add('hidden');
+        resetPinDots();
+        document.getElementById('pin-modal').classList.remove('hidden');
+      } else {
+        // Disable
+        Storage.setPinEnabled(false);
+        Storage.setPin('');
+        document.getElementById('pin-toggle').classList.remove('on');
+        document.getElementById('change-pin-row').style.display = 'none';
+        App.toast('App lock disabled 🔓');
+      }
+    }
+
+    function openChangePin() {
+      pinModalMode    = 'change';
+      pinFirstEntry   = '';
+      pinCurrentEntry = '';
+      document.getElementById('pin-modal-title').textContent = 'Change PIN';
+      document.getElementById('pin-modal-sub').textContent   = 'Enter your new 4-digit PIN';
+      document.getElementById('pin-modal-error').classList.add('hidden');
+      resetPinDots();
+      document.getElementById('pin-modal').classList.remove('hidden');
+    }
+
+    function closePinModal() {
+      document.getElementById('pin-modal').classList.add('hidden');
+      pinCurrentEntry = '';
+      pinFirstEntry   = '';
+      resetPinDots();
+    }
+
+    function resetPinDots() {
+      pinCurrentEntry = '';
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`mpd-${i}`);
+        if (dot) dot.classList.remove('filled');
+      }
+    }
+
+    function pinKeyPress(key) {
+      if (key === 'del') {
+        if (pinCurrentEntry.length > 0) {
+          pinCurrentEntry = pinCurrentEntry.slice(0, -1);
+          updatePinDots();
+        }
+        return;
+      }
+
+      if (pinCurrentEntry.length >= 4) return;
+      pinCurrentEntry += key;
+      updatePinDots();
+
+      if (pinCurrentEntry.length === 4) {
+        setTimeout(() => handlePinComplete(), 200);
+      }
+    }
+
+    function updatePinDots() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`mpd-${i}`);
+        if (dot) dot.classList.toggle('filled', i < pinCurrentEntry.length);
+      }
+    }
+
+    function handlePinComplete() {
+      if (pinModalMode === 'set' || pinModalMode === 'change') {
+        if (!pinFirstEntry) {
+          // First entry — ask to confirm
+          pinFirstEntry  = pinCurrentEntry;
+          pinCurrentEntry = '';
+          resetPinDots();
+          document.getElementById('pin-modal-sub').textContent = 'Confirm your PIN';
+        } else {
+          // Confirm entry
+          if (pinCurrentEntry === pinFirstEntry) {
+            Storage.setPin(pinCurrentEntry);
+            Storage.setPinEnabled(true);
+        sessionStorage.setItem('elyra_unlocked', 'true'); // keep current session unlocked
+            closePinModal();
+            loadSettings();
+            App.toast('App lock enabled 🔒');
+          } else {
+            document.getElementById('pin-modal-error').textContent = "PINs don't match. Try again.";
+            document.getElementById('pin-modal-error').classList.remove('hidden');
+            pinFirstEntry  = '';
+            pinCurrentEntry = '';
+            resetPinDots();
+            document.getElementById('pin-modal-sub').textContent = 'Choose a 4-digit PIN';
+          }
+        }
+      }
+    }
+
+    // ── Data ──
+    function exportData() {
+      const companions = Storage.getCompanions();
+      const exportObj  = {
+        exportDate: new Date().toISOString(),
+        profile:    Storage.getProfile(),
+        companions: companions.map(c => ({
+          ...c,
+          chatHistory: Storage.getChatHistory(c.id),
+          memory:      Storage.getMemory(c.id),
+        })),
+      };
+      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `aura-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      App.toast('Chats exported 📤');
+    }
+
+    function clearAllMemory() {
+      if (!confirm('Clear all memory from all companions? They will forget everything you told them.')) return;
+      const companions = Storage.getCompanions();
+      companions.forEach(c => {
+        Storage.saveMemory(c.id, { pinned: [], summary: '', summaryUpTo: 0 });
+      });
+      App.toast('All memory cleared 🧠');
+    }
+
+    function clearAllData() {
+      if (!confirm('This will delete EVERYTHING — all companions, chats, keys, and settings. This cannot be undone.\n\nAre you sure?')) return;
+      Storage.clearAll();
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    // ── Nav ──
+    function goBack() {
+      window.location.href = 'home.html';
+    }
+
+    // Close modals on overlay click
+    ['profile-modal','keys-modal','model-modal','pin-modal'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', function(e) {
+        if (e.target === this) closePinModal(), this.classList.add('hidden');
+      });
+    });
+  </script>
+</body>
+</html>

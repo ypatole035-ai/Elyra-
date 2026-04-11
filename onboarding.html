@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Elyra — Create Your Companion</title>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/screens.css"/>
+  <style>
+    .onboard-page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      padding: 0 20px;
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+
+    .onboard-header {
+      padding: 20px 0 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .onboard-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-panel {
+      display: none;
+      flex-direction: column;
+      gap: var(--gap-lg);
+      animation: fadeUp 0.4s ease both;
+    }
+    .step-panel.active { display: flex; }
+
+    .step-heading {
+      margin-bottom: 4px;
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .step-sub {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .onboard-footer {
+      padding: 16px 0 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: var(--gap-sm);
+    }
+
+    .btn-back {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--r-full);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+    }
+    .btn-back:hover { background: var(--surface3); color: var(--text); }
+
+    .btn-next {
+      flex: 1;
+      height: 52px;
+      border-radius: var(--r-full);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all var(--t-normal);
+      box-shadow: 0 4px 20px var(--accent-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-next:hover { box-shadow: 0 6px 28px rgba(168,85,247,0.4); transform: translateY(-1px); }
+    .btn-next:active { transform: scale(0.98); }
+
+    /* Preview card (step 2) */
+    .preview-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .preview-info { flex: 1; min-width: 0; }
+    .preview-name {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .preview-tag { margin-top: 4px; }
+
+    /* Relation cards (step 3) */
+    .relation-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap-sm);
+    }
+
+    .relation-card {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 14px;
+      cursor: pointer;
+      transition: all var(--t-normal);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .relation-card .emoji { font-size: 1.5rem; }
+    .relation-card .rname {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .relation-card .rdesc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .relation-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .relation-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* Personality chips (step 4) */
+    .personality-grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-sm);
+    }
+
+    .personality-card {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all var(--t-fast);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .personality-card .p-emoji { font-size: 1.3rem; flex-shrink: 0; }
+    .personality-card .p-info { flex: 1; }
+    .personality-card .p-name {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .personality-card .p-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .personality-card .p-check {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      transition: all var(--t-fast);
+    }
+    .personality-card:hover { border-color: var(--accent); }
+    .personality-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .personality-card.selected .p-check {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Error */
+    .field-error {
+      font-size: 0.78rem;
+      color: var(--error);
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-top"></div>
+
+  <div class="onboard-page">
+
+    <!-- Header -->
+    <div class="onboard-header">
+      <div class="flex items-center justify-between" style="margin-bottom:16px;">
+        <span class="logomark logomark-sm">Elyra</span>
+        <span id="step-counter" class="caption">Step 1 of 4</span>
+      </div>
+      <!-- Step progress bar -->
+      <div class="step-bar" id="step-bar">
+        <div class="step-dot active" id="dot-0"></div>
+        <div class="step-dot"        id="dot-1"></div>
+        <div class="step-dot"        id="dot-2"></div>
+        <div class="step-dot"        id="dot-3"></div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="onboard-content">
+
+      <!-- ── STEP 1: About You ── -->
+      <div class="step-panel active" id="step-1">
+        <div class="step-heading">
+          <div class="step-title">Tell me about<br/>yourself 👋</div>
+          <p class="step-sub">This helps your companion understand you better.</p>
+        </div>
+
+        <!-- Name -->
+        <div class="input-group">
+          <div class="input-label">Your Name</div>
+          <div class="input-wrap">
+            <input class="input-field" id="user-name" type="text" placeholder="What should I call you?" maxlength="30" autocomplete="off"/>
+          </div>
+          <div class="field-error hidden" id="name-error">Please enter your name</div>
+        </div>
+
+        <!-- Gender -->
+        <div class="input-group">
+          <div class="input-label">Your Gender</div>
+          <div class="gender-grid">
+            <div class="gender-card selected" data-gender="male" onclick="selectGender('male')">
+              <div class="icon">👨</div>
+              <div class="name">Male</div>
+            </div>
+            <div class="gender-card" data-gender="female" onclick="selectGender('female')">
+              <div class="icon">👩</div>
+              <div class="name">Female</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STEP 2: Companion Setup ── -->
+      <div class="step-panel" id="step-2">
+        <div class="step-heading">
+          <div class="step-title">Create your<br/>companion ✨</div>
+          <p class="step-sub">Give them a name and choose their look.</p>
+        </div>
+
+        <!-- Bot name -->
+        <div class="input-group">
+          <div class="input-label">Companion's Name</div>
+          <div class="input-wrap">
+            <input class="input-field" id="bot-name" type="text" placeholder="e.g. Nova, Zara, Luna..." maxlength="20" autocomplete="off"/>
+          </div>
+          <div class="field-error hidden" id="botname-error">Please enter a name</div>
+        </div>
+
+        <!-- Avatar picker -->
+        <div class="input-group">
+          <div class="input-label">Choose Avatar</div>
+          <div class="avatar-grid" id="avatar-grid">
+            <!-- filled by JS -->
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-card" id="preview-card">
+          <div class="avatar avatar-lg" id="preview-avatar">🌸</div>
+          <div class="preview-info">
+            <div class="preview-name" id="preview-name">Your Companion</div>
+            <div class="preview-tag">
+              <span class="relation-tag" id="preview-relation">✨ AI Companion</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STEP 3: Relation ── -->
+      <div class="step-panel" id="step-3">
+        <div class="step-heading">
+          <div class="step-title">How do you<br/>know them? 💞</div>
+          <p class="step-sub">This shapes how your companion talks to you.</p>
+        </div>
+
+        <div class="relation-grid" id="relation-grid">
+          <!-- filled by JS -->
+        </div>
+        <div class="field-error hidden" id="relation-error">Please select a relation</div>
+      </div>
+
+      <!-- ── STEP 4: Personality ── -->
+      <div class="step-panel" id="step-4">
+        <div class="step-heading">
+          <div class="step-title">Their vibe? 🎭</div>
+          <p class="step-sub">Choose one personality for your companion.</p>
+        </div>
+
+        <div class="personality-grid" id="personality-grid">
+          <!-- filled by JS -->
+        </div>
+        <div class="field-error hidden" id="personality-error">Please select a personality</div>
+      </div>
+
+    </div>
+
+    <!-- Footer nav -->
+    <div class="onboard-footer">
+      <div class="nav-row">
+        <button class="btn-back hidden" id="btn-back" onclick="prevStep()">←</button>
+        <button class="btn-next" id="btn-next" onclick="nextStep()">
+          <span id="btn-next-text">Continue</span> →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script>
+    // ── Data ──
+    const AVATARS = ['🌸','🌙','⚡','🌺','💫','🍀','🦋','🌊','🔥','🌷','🎀','💎','🌈','🦊','🌻'];
+
+    const RELATIONS = [
+      { id:'girlfriend', emoji:'💕', name:'Girlfriend',   desc:'Romantic & caring' },
+      { id:'bestfriend', emoji:'🤝', name:'Best Friend',  desc:'Always got your back' },
+      { id:'sister',     emoji:'👧', name:'Sister',       desc:'Protective & teasing' },
+      { id:'crush',      emoji:'😍', name:'Crush',        desc:'Shy & nervous energy' },
+    ];
+
+    const PERSONALITIES = [
+      { id:'sympathy',  emoji:'🥺', name:'Sympathy Mode',   desc:'Always understanding, emotionally supportive' },
+      { id:'sarcastic', emoji:'😏', name:'Sarcastic',       desc:'Witty, dry humour, never lets things slide' },
+      { id:'flirty',    emoji:'😘', name:'Flirty',          desc:'Playful, charming, always a little extra' },
+      { id:'dramatic',  emoji:'😭', name:'Dramatic',        desc:'Overthinks everything, very expressive' },
+      { id:'roast',     emoji:'🔥', name:'Roast Machine',   desc:'Loves you but will absolutely clown on you' },
+    ];
+
+    // ── State ──
+    let currentStep = 1;
+    const data = {
+      userName: '', userGender: 'male',
+      botName: '', botAvatar: '🌸',
+      relation: '', personality: ''
+    };
+
+    // ── Init ──
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!Storage.isSetupDone()) {
+        window.location.href = 'index.html';
+        return;
+      }
+      // Only redirect to home if onboarding is done AND we're not adding a new companion
+      const addingNew = sessionStorage.getItem('elyra_adding_companion');
+      if (Storage.isOnboardDone() && Storage.getCompanions().length > 0 && !addingNew) {
+        window.location.href = 'home.html';
+        return;
+      }
+      // Clear the adding flag
+      sessionStorage.removeItem('elyra_adding_companion');
+      buildAvatarGrid();
+      buildRelationGrid();
+      buildPersonalityGrid();
+    });
+
+    // ── Avatar Grid ──
+    function buildAvatarGrid() {
+      const grid = document.getElementById('avatar-grid');
+      grid.innerHTML = AVATARS.map((a, i) => `
+        <div class="avatar-option ${i === 0 ? 'selected' : ''}"
+             onclick="selectAvatar('${a}', this)">${a}</div>
+      `).join('');
+    }
+
+    function selectAvatar(emoji, el) {
+      document.querySelectorAll('.avatar-option').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      data.botAvatar = emoji;
+      document.getElementById('preview-avatar').textContent = emoji;
+    }
+
+    // ── Relation Grid ──
+    function buildRelationGrid() {
+      const grid = document.getElementById('relation-grid');
+      grid.innerHTML = RELATIONS.map(r => `
+        <div class="relation-card" data-id="${r.id}" onclick="selectRelation('${r.id}', this)">
+          <div class="emoji">${r.emoji}</div>
+          <div class="rname">${r.name}</div>
+          <div class="rdesc">${r.desc}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectRelation(id, el) {
+      document.querySelectorAll('.relation-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      data.relation = id;
+      document.getElementById('relation-error').classList.add('hidden');
+      // update preview tag
+      const rel = RELATIONS.find(r => r.id === id);
+      if (rel) document.getElementById('preview-relation').textContent = rel.emoji + ' ' + rel.name;
+    }
+
+    // ── Personality Grid ──
+    function buildPersonalityGrid() {
+      const grid = document.getElementById('personality-grid');
+      grid.innerHTML = PERSONALITIES.map(p => `
+        <div class="personality-card" data-id="${p.id}" onclick="selectPersonality('${p.id}', this)">
+          <div class="p-emoji">${p.emoji}</div>
+          <div class="p-info">
+            <div class="p-name">${p.name}</div>
+            <div class="p-desc">${p.desc}</div>
+          </div>
+          <div class="p-check">✓</div>
+        </div>
+      `).join('');
+    }
+
+    function selectPersonality(id, el) {
+      document.querySelectorAll('.personality-card').forEach(e => e.classList.remove('selected'));
+      el.classList.add('selected');
+      data.personality = id;
+      document.getElementById('personality-error').classList.add('hidden');
+    }
+
+    // ── Gender ──
+    function selectGender(gender) {
+      document.querySelectorAll('.gender-card').forEach(e => e.classList.remove('selected'));
+      document.querySelector(`[data-gender="${gender}"]`).classList.add('selected');
+      data.userGender = gender;
+    }
+
+    // ── Step Navigation ──
+    function updateStepUI() {
+      // panels
+      document.querySelectorAll('.step-panel').forEach((p, i) => {
+        p.classList.toggle('active', i + 1 === currentStep);
+      });
+      // dots
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.classList.remove('active', 'done');
+        if (i + 1 < currentStep) dot.classList.add('done');
+        if (i + 1 === currentStep) dot.classList.add('active');
+      }
+      // counter
+      document.getElementById('step-counter').textContent = `Step ${currentStep} of 4`;
+      // back button
+      document.getElementById('btn-back').classList.toggle('hidden', currentStep === 1);
+      // next button text
+      document.getElementById('btn-next-text').textContent = currentStep === 4 ? 'Start Chatting' : 'Continue';
+    }
+
+    function validateStep() {
+      if (currentStep === 1) {
+        const name = document.getElementById('user-name').value.trim();
+        if (!name) {
+          document.getElementById('name-error').classList.remove('hidden');
+          return false;
+        }
+        data.userName = name;
+        document.getElementById('name-error').classList.add('hidden');
+        return true;
+      }
+      if (currentStep === 2) {
+        const name = document.getElementById('bot-name').value.trim();
+        if (!name) {
+          document.getElementById('botname-error').classList.remove('hidden');
+          return false;
+        }
+        data.botName = name;
+        document.getElementById('botname-error').classList.add('hidden');
+        document.getElementById('preview-name').textContent = name;
+        return true;
+      }
+      if (currentStep === 3) {
+        if (!data.relation) {
+          document.getElementById('relation-error').classList.remove('hidden');
+          return false;
+        }
+        return true;
+      }
+      if (currentStep === 4) {
+        if (!data.personality) {
+          document.getElementById('personality-error').classList.remove('hidden');
+          return false;
+        }
+        return true;
+      }
+      return true;
+    }
+
+    function nextStep() {
+      if (!validateStep()) return;
+      if (currentStep < 4) {
+        currentStep++;
+        updateStepUI();
+        // Live preview update on step 2
+        if (currentStep === 2) {
+          const name = document.getElementById('bot-name');
+          name.addEventListener('input', () => {
+            document.getElementById('preview-name').textContent = name.value || 'Your Companion';
+          });
+        }
+      } else {
+        // Final step — save and go
+        finishOnboarding();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateStepUI();
+      }
+    }
+
+    function finishOnboarding() {
+      // Save profile
+      Storage.setProfile({ name: data.userName, gender: data.userGender });
+
+      // Determine bot gender based on user gender + relation
+      function getBotGender(userGender, relation) {
+        // These relations are typically opposite gender for male users
+        const oppositeForMale = ['girlfriend', 'crush', 'sister'];
+        const oppositeForFemale = ['bestfriend', 'crush'];
+        if (userGender === 'male')   return oppositeForMale.includes(relation)   ? 'female' : 'female';
+        if (userGender === 'female') return oppositeForFemale.includes(relation) ? 'male'   : 'female';
+        return 'female';
+      }
+
+      // Create companion
+      const companion = Storage.createCompanion({
+        name:        data.botName,
+        avatar:      data.botAvatar,
+        relation:    data.relation,
+        personality: data.personality,
+        gender:      getBotGender(data.userGender, data.relation),
+      });
+
+      Storage.markOnboardDone();
+      Storage.setActiveCompanionId(companion.id);
+
+      // Animate out
+      document.querySelector('.onboard-page').style.transition = 'opacity 0.3s, transform 0.3s';
+      document.querySelector('.onboard-page').style.opacity = '0';
+      document.querySelector('.onboard-page').style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        window.location.href = `chat.html?id=${companion.id}`;
+      }, 300);
+    }
+  </script>
+</body>
+</html>

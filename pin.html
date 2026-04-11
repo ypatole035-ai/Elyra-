@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Elyra — Unlock</title>
+  <link rel="stylesheet" href="css/base.css"/>
+  <link rel="stylesheet" href="css/components.css"/>
+  <link rel="stylesheet" href="css/screens.css"/>
+</head>
+<body>
+  <div class="ambient-top"></div>
+  <div class="ambient-bottom"></div>
+
+  <div class="pin-screen anim-fade-in">
+
+    <div class="pin-header">
+      <div class="pin-lock-icon">🔒</div>
+      <div class="pin-title">Welcome back</div>
+      <p class="pin-sub">Enter your PIN to unlock</p>
+    </div>
+
+    <!-- Dots -->
+    <div class="pin-grid" id="pin-dots">
+      <div class="pin-dot" id="pd-0"></div>
+      <div class="pin-dot" id="pd-1"></div>
+      <div class="pin-dot" id="pd-2"></div>
+      <div class="pin-dot" id="pd-3"></div>
+    </div>
+
+    <div class="pin-error" id="pin-error"></div>
+
+    <!-- Keypad -->
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pressKey('1')">1</button>
+      <button class="pin-key" onclick="pressKey('2')">2</button>
+      <button class="pin-key" onclick="pressKey('3')">3</button>
+      <button class="pin-key" onclick="pressKey('4')">4</button>
+      <button class="pin-key" onclick="pressKey('5')">5</button>
+      <button class="pin-key" onclick="pressKey('6')">6</button>
+      <button class="pin-key" onclick="pressKey('7')">7</button>
+      <button class="pin-key" onclick="pressKey('8')">8</button>
+      <button class="pin-key" onclick="pressKey('9')">9</button>
+      <div class="pin-key empty"></div>
+      <button class="pin-key" onclick="pressKey('0')">0</button>
+      <button class="pin-key delete" onclick="pressKey('del')">⌫</button>
+    </div>
+
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let entered = '';
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // If PIN not enabled, redirect
+      if (!Storage.isPinEnabled()) {
+        redirect();
+        return;
+      }
+      // If already unlocked this session
+      if (sessionStorage.getItem('elyra_unlocked')) {
+        redirect();
+        return;
+      }
+    });
+
+    function pressKey(key) {
+      if (key === 'del') {
+        if (entered.length > 0) {
+          entered = entered.slice(0, -1);
+          updateDots();
+        }
+        return;
+      }
+      if (entered.length >= 4) return;
+      entered += key;
+      updateDots();
+
+      if (entered.length === 4) {
+        setTimeout(checkPin, 150);
+      }
+    }
+
+    function updateDots() {
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`pd-${i}`).classList.toggle('filled', i < entered.length);
+      }
+    }
+
+    function checkPin() {
+      if (Storage.verifyPin(entered)) {
+        sessionStorage.setItem('elyra_unlocked', 'true');
+        document.querySelector('.pin-screen').style.transition = 'opacity 0.3s';
+        document.querySelector('.pin-screen').style.opacity = '0';
+        setTimeout(redirect, 300);
+      } else {
+        attempts++;
+        entered = '';
+        updateDots();
+
+        const errorEl = document.getElementById('pin-error');
+        if (attempts >= MAX_ATTEMPTS) {
+          errorEl.textContent = 'Too many attempts. Try again later.';
+        } else {
+          errorEl.textContent = `Incorrect PIN. ${MAX_ATTEMPTS - attempts} attempt${MAX_ATTEMPTS - attempts === 1 ? '' : 's'} left.`;
+        }
+
+        // Shake animation on dots
+        const grid = document.getElementById('pin-dots');
+        grid.style.animation = 'none';
+        grid.offsetHeight; // reflow
+        grid.style.animation = 'shake 0.4s ease';
+      }
+    }
+
+    function redirect() {
+      const dest = sessionStorage.getItem('elyra_pin_dest');
+      sessionStorage.removeItem('elyra_pin_dest');
+      sessionStorage.setItem('elyra_unlocked', 'true');
+      window.location.href = dest || 'home.html';
+    }
+
+    // Shake animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes shake {
+        0%,100% { transform: translateX(0); }
+        20%      { transform: translateX(-8px); }
+        40%      { transform: translateX(8px); }
+        60%      { transform: translateX(-6px); }
+        80%      { transform: translateX(6px); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
