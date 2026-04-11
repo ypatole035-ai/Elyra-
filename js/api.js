@@ -25,8 +25,8 @@ const API = (() => {
   // Primary:   gemini-2.5-flash-lite  → 15 RPM, 1000/day (best free limits)
   // Secondary: gemini-2.5-flash       → 10 RPM, 250/day  (better quality)
   // Note: gemini-1.5-flash and gemini-2.0-flash are SHUT DOWN as of 2026
-  const GEMINI_MODEL_PRIMARY   = 'gemini-2.5-flash-lite-preview-06-17';
-  const GEMINI_MODEL_SECONDARY = 'gemini-2.5-flash-preview-05-20';
+  const GEMINI_MODEL_PRIMARY   = 'gemini-2.5-flash-lite';
+  const GEMINI_MODEL_SECONDARY = 'gemini-2.5-flash';
 
   let geminiModelLiteLimitHit = false; // track if lite model hit limit
 
