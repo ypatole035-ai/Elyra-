@@ -1,7 +1,7 @@
 {
   "appId": "com.elyra.app",
   "appName": "Elyra",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "url": "https://ypatole035-ai.github.io/Elyra-/",
     "cleartext": false
