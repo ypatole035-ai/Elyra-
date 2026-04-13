@@ -1,0 +1,13 @@
+{
+  "appId": "com.elyra.app",
+  "appName": "Elyra",
+  "webDir": ".",
+  "server": {
+    "url": "https://ypatole035-ai.github.io/Elyra-/",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#09090f"
+  }
+}
