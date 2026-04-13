@@ -3,13 +3,11 @@
   "version": "1.0.0",
   "description": "Elyra - Create who you connect with.",
   "scripts": {
-    "build": "echo 'No build step needed'",
-    "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android"
+    "build": "echo 'No build step needed'"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.0",
-    "@capacitor/core": "^8.3.0",
+    "@capacitor/core": "^8.3.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.0"
