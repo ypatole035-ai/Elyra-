@@ -33,14 +33,22 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Copy Elyra icons
+      - name: Replace app icons
         run: |
           RES=android/app/src/main/res
+          echo "Mipmap folders found:"
+          ls $RES | grep mipmap
           for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            cp icons/mipmap-$density/ic_launcher.png       $RES/mipmap-$density/ic_launcher.png
-            cp icons/mipmap-$density/ic_launcher_round.png $RES/mipmap-$density/ic_launcher_round.png
+            SRC="icons/mipmap-$density"
+            DEST="$RES/mipmap-$density"
+            if [ -d "$SRC" ] && [ -d "$DEST" ]; then
+              cp $SRC/ic_launcher.png       $DEST/ic_launcher.png
+              cp $SRC/ic_launcher_round.png $DEST/ic_launcher_round.png
+              echo "✅ Replaced mipmap-$density"
+            else
+              echo "⚠️  Skipped mipmap-$density (src exists: $([ -d $SRC ] && echo yes || echo no), dest exists: $([ -d $DEST ] && echo yes || echo no))"
+            fi
           done
-          echo "Icons copied!"
 
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
